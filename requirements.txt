@@ -1,0 +1,8 @@
+TO RUN THE APPLICATION , YOU NEED TO INSTALL ;
+install PYTHON latest version....
+After installation of python , install the packages of python . They are
+PYMONGO and PWINPUT
+to install these packages , follow the below steps....
+---> open COMMAND PROMPT and enter the code as
+===> "pip install pymongo pwinput"
+After installing the packages and run the code in TERMINAL or COMMAND PROMPT  
