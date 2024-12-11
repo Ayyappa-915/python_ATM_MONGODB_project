@@ -1,373 +1,312 @@
 import pymongo
-server=pymongo.MongoClient("mongodb+srv://coderhoney915:coderhoney915@atm-cluster.1vgy1.mongodb.net/")
-mydb=server["atm_database"]
-mycoll=mydb["accounts"]
-mycoll1=mydb["Transactions"]
+import pwinput as p
+from datetime import datetime
+
+server = pymongo.MongoClient("mongodb+srv://coderhoney915:coderhoney915@atm-cluster.1vgy1.mongodb.net/")
+mydb = server["atm_database"]
+mycoll = mydb["accounts"]
+mycoll1 = mydb["Transactions"]
+
+def valid_account_number(account_number):
+    """Helper function to validate account number length."""
+    return len(str(account_number)) == 10
+
+def valid_pin(pin):
+    """Helper function to validate pin length."""
+    return len(str(pin)) == 4
+
 def registration():
-    print()
-    balance=0
-    a=input("Enter account holder name:")
-    account_holder_name=a.upper()
     try:
-        account_number=int(input("Enter account number:"))
-        x=str(account_number)
-        if len(x) == 10:
-            q1=mycoll.find_one({'Account-number':{'$eq':account_number}})
-            if q1:
-                print("... Account number must be unique.Please use another account number ...")
+        print()
+        balance = 0
+        account_holder_name = input("Enter account holder name:").upper()
+
+        account_number = int(input("Enter account number:"))
+        if valid_account_number(account_number):
+            if mycoll.find_one({'Account-number': account_number}):
+                print("...Account number must be unique. Please use another account number...")
             else:
-                choice=mycoll.find_one({'Account-Holder-name':account_holder_name , 'Account-number': account_number ,'money':balance})
-                if choice:
-                    print("... '{0}' user already registered in the ATM...".format(account_holder_name))
+                if mycoll.find_one({'Account-Holder-name': account_holder_name, 'Account-number': account_number, 'money': balance}):
+                    print(f"...'{account_holder_name}' user already registered in the ATM...")
                 else:
-                    mycoll.insert_one({'Account-Holder-name':account_holder_name , 'Account-number':account_number , 'money':balance })
+                    mycoll.insert_one({'Account-Holder-name': account_holder_name, 'Account-number': account_number, 'money': balance})
                     print("....Account was successfully registered....")
         else:
             print("....Account number must contain 10 digits....")
-    except:
+    except ValueError:
         print("...Account number must contain only digits...")
+    except Exception as e:
+        print(f"...Error: {str(e)}...")
     enquiry()
+
 def generate_pin():
-    import pwinput as p
-    print()
-    a=input("Enter account holder name:")
-    account_holder_name=a.upper()
-    account_number=int(input("Enter account number:"))
     try:
-        x=str(account_number)
-        if len(x) == 10:
-            z=mycoll.find_one({'$and':[{'Account-Holder-name':{'$eq':account_holder_name}},{'Account-number':{'$eq':account_number}}]})
-            if z:
-                q1='pin'
-                document=mycoll.find_one({'Account-number':account_number})
-                if q1 in document:
-                    print("... Pin number was already generated for your account ...")
+        print()
+        account_holder_name = input("Enter account holder name:").upper()
+        account_number = int(input("Enter account number:"))
+
+        if valid_account_number(account_number):
+            document = mycoll.find_one({'Account-Holder-name': account_holder_name, 'Account-number': account_number})
+            if document:
+                if 'pin' in document:
+                    print("...Pin number was already generated for your account...")
                 else:
-                    choice=mycoll.find_one({'$and':[{'Account-Holder-name':{'$eq':account_holder_name}},{'Account-number':{'$eq':account_number}}] })
-                    if choice:
-                        try:
-                            pin_number1=int(p.pwinput("Please enter the four digit pin number :" ,'*' ))
-                            if pin_number1==0000:
-                                print("...pin number not be zero...")
-                            x1=str(pin_number1)
-                            if len(x1) == 4:
-                                pin_number2=int(p.pwinput("Re-enter the four digit pin number :" ,'*' ))
-                                if pin_number1 == pin_number2:
-                                    pin_number=pin_number1
-                                    mycoll.update_one({'Account-Holder-name':account_holder_name , 'Account-number':account_number},{'$set':{'pin':pin_number}})
-                                    mycoll1.update_one({'Account-number':account_number},{'$set':{'pin':pin_number}})
-                                    print("... Pin was successfully generated for your account ...")
-                                else:
-                                    print(" ...pin number should be matched. please Try again ...")
-                            else:
-                                print("... Pin number must contain 4 digits ...")
-                        except:
-                            print("...Pin number must contain only digits...")
-                    else:
-                        print("...Please enter valid Account and Pin number details...")
-            else:
-                print("...Account user must be Registered in the ATM...")
-        else:
-            print("...Account number must contain 10 digits...")
-    except:
-        print("...Account number must contain only digits...")
-    enquiry()
-def deposit():
-    import pwinput as p
-    print()
-    try:
-        account_number=int(input("Enter account number:"))
-        x=str(account_number)
-        if len(x) == 10:
-            doc1=mycoll.find_one({'Account-number':{'$eq':account_number}})
-            if doc1:
-                try:
-                    p1=int(p.pwinput("Please enter the four digit pin number :" ,'*' ))
-                    if p1 == 0000:
+                    pin_number1 = int(p.pwinput("Please enter the four-digit pin number: ", '*'))
+                    if pin_number1 == 0000:
                         print("...Pin number must not be zero...")
-                    s=str(p1)
-                    if len(s) == 4:
-                        q1='pin'
-                        document=mycoll.find_one({'Account-number':account_number})
-                        if q1 in document:
-                            query1=mycoll.find_one({'$and':[{'Account-number':{'$eq':account_number}},{'pin':{'$eq':p1}}]})
-                            if query1:
-                                amount=int(input("Enter how much money do you want to deposit:"))
-                                mycoll.update_one({'Account-number':account_number},{'$inc':{'money':amount}})
-                                print(f" ...Your money 'Rs:{amount}' was successfully deposited into your account ...")
-                                create_transac_his(account_number,"deposit",amount,p1)
-                            else:
-                                print(" ...Please Enter valid Account number or Pin number...")
+                    elif valid_pin(pin_number1):
+                        pin_number2 = int(p.pwinput("Re-enter the four-digit pin number: ", '*'))
+                        if pin_number1 == pin_number2:
+                            mycoll.update_one({'Account-Holder-name': account_holder_name, 'Account-number': account_number}, {'$set': {'pin': pin_number1}})
+                            mycoll1.update_one({'Account-number': account_number}, {'$set': {'pin': pin_number1}})
+                            print("...Pin was successfully generated for your account...")
                         else:
-                            print(" ...User must be generate Pin number for the Account ...")
+                            print("...Pin numbers must match. Please try again...")
                     else:
                         print("...Pin number must contain 4 digits...")
-                except:
-                    print("...Pin number must contain only digits...")
             else:
-                print(" ...User must be register in the ATM system ...")
+                print("...Account must be registered in the ATM...")
         else:
             print("...Account number must contain 10 digits...")
-    except:
-        print("...Account number must contain only digits...")
+    except ValueError:
+        print("...Account number and pin must contain only digits...")
+    except Exception as e:
+        print(f"...Error: {str(e)}...")
     enquiry()
-def create_transac_his(accno,trans_type,amount,pwd):
-    from datetime import datetime
-    account_number=accno
-    transaction_type=trans_type
-    amt=amount
-    time=datetime.now()
-    pin=pwd
-    t=time.strftime("%Y:%D:%H:%M:%S")
-    mycoll1.insert_one({'Account-number':account_number , 'Transaction-Type':transaction_type , 'Amount':amt , 'Time':t , 'pin':pwd})
-def view_transac_his():
-    print()
-    import pwinput as p
+
+def deposit():
     try:
-        accno=int(input("Enter Account number:"))
-    except:
-        print("...Account number must contain only digits...")
-    x=str(accno)
-    if len(x) == 10:
-        z='pin'
-        document=mycoll.find_one({'Account-number':{'$eq':accno}})
-        if z in document:
-            try:
-                p1=int(p.pwinput("Please enter the four digit pin number :" ,'*' ))
-            except:
-                print("...PIN number must contain only digits...")
-            y=str(p1)
-            if len(y) == 4:
-                q1=mycoll.find_one({'$and':[{'Account-number':{'$eq':accno}},{'pin':{'$eq':p1}}]})
-                if q1:
-                    q2=mycoll1.find({'Account-number':{'$eq':accno}},{'Amount':1,'Time':1,'Transaction-Type':1,'_id':0})
-                    for a in q2:
-                        print(a)
-                else:
-                    print("...Enter valid Account and PIN details...")
-            else:
-                print("...PIN number contain only 4 digits...")
-        else:
-            print("...User must generate PIN for the Account...")
-    else:
-        print("...Account number must contain 10 digits...")
-    enquiry()
-def withdraw():
-    import pwinput as p
-    print()
-    try:
-        account_number=int(input("Enter account number:"))
-        x=str(account_number)
-        if len(x) == 10:
-            doc1=mycoll.find_one({'Account-number':{'$eq':account_number}})
+        print()
+        account_number = int(input("Enter account number:"))
+
+        if valid_account_number(account_number):
+            doc1 = mycoll.find_one({'Account-number': account_number})
             if doc1:
-                try:
-                    p1=int(p.pwinput("Please enter the four digit pin number :" ,'*' ))
-                    if p1 == 0000:
-                        print("...Pin number must not be zero...")
-                    s=str(p1)
-                    if len(s) == 4:
-                        q1='pin'
-                        document=mycoll.find_one({'Account-number':account_number})
-                        if q1 in document:
-                            query1=mycoll.find_one({'$and':[{'Account-number':{'$eq':account_number}},{'pin':{'$eq':p1}}]})
-                            if query1:
-                                amount=int(input("Enter how much money do you want to withdraw:"))
-                                z=mycoll.find_one({'$and':[{'Account-number':{'$eq':account_number}} , {'money':{'$gt':amount}}]})
-                                if z:
-                                    mycoll.update_one({'Account-number':account_number},{'$inc':{'money':-amount}})
-                                    print(f" ...Your money 'Rs:{amount}' was successfully  withdrawn from your account ...")
-                                    create_transac_his(account_number,"withdraw",amount,p1)
-                                else:
-                                    print("...Insufficient funds are available in your account...")
-                            else:
-                                print(" ...Please Enter valid Account number or Pin number...")
+                pin = int(p.pwinput("Please enter the four-digit pin number: ", '*'))
+                if valid_pin(pin):
+                    if 'pin' in doc1:
+                        account_data = mycoll.find_one({'$and': [{'Account-number': account_number}, {'pin': pin}]})
+                        if account_data:
+                            amount = int(input("Enter how much money do you want to deposit:"))
+                            mycoll.update_one({'Account-number': account_number}, {'$inc': {'money': amount}})
+                            print(f"...Your money 'Rs:{amount}' was successfully deposited into your account...")
+                            create_transac_his(account_number, "deposit", amount, pin)
                         else:
-                            print(" ...User must be generate Pin number for the Account ...")
+                            print("...Invalid account number or pin. Please try again...")
                     else:
-                        print("...Pin number must contain 4 digits...")  
-                except:
-                    print("...Pin number must contain only digits...")
-            else:
-                print(" ...User must be register in the ATM system ...")
-        else:
-            print("...Account number must contain 10 digits...")
-    except:
-        print("...Account number must contain only digits...")
-    enquiry()
-def money_transfer():
-    print()
-    import pwinput as p
-    try:
-        receiver_account_number=int(input("Enter RECEIVER'S account number:"))
-    except:
-        print("...Account number must contain only digits...")
-    x=str(receiver_account_number)
-    if len(x) == 10:
-        doc1=mycoll.find_one({'Account-number':{'$eq':receiver_account_number}})
-        if doc1:
-            try:
-                sender_account_number=int(input("Enter SENDER'S account number:"))
-            except:
-                print("...Account number must contain only digits...")
-            y=str(sender_account_number)
-            if len(y) == 10:
-                doc2=mycoll.find_one({'Account-number':{'$eq':sender_account_number}})
-                if doc2:
-                    try:
-                        p1=int(p.pwinput("Enter four digit Pin number:" , '*'))
-                    except:
-                        print("...PIN number must contain only digits...")
-                    if p1 == 0000:
-                        print("...Pin number must not be zero...")
-                    else:
-                        z=str(p1)
-                        if len(z) == 4:
-                            q1='pin'
-                            document=mycoll.find_one({'Account-number':sender_account_number})
-                            if q1 in document:
-                                query1=mycoll.find_one({'$and':[{'Account-number':{'$eq':sender_account_number}},{'pin':{'$eq':p1}}]})
-                                if query1:
-                                    amount=int(input("Enter how much money do you want to transfer :"))
-                                    z=mycoll.find_one({'$and':[{'Account-number':{'$eq':sender_account_number}} , {'money':{'$gt':amount}}]})
-                                    if z:
-                                        mycoll.update_one({'Account-number':receiver_account_number},{'$inc':{'money':amount}})
-                                        create_transac_his(receiver_account_number,"money transfer deposit",amount,p1)
-                                        mycoll.update_one({'Account-number':sender_account_number},{'$inc':{'money': -amount}})
-                                        create_transac_his(sender_account_number,"money transfer withdrawl",amount,p1)
-                                        print(f"...your money was RS:{amount} was successfully transfered from your ")
-                                    else:
-                                        print("...Insufficient funds are available in SENDER'S account...")
-                                else:
-                                    print(" ...Please enter valid Account number or Pin number ...")
-                            else:
-                                print("...SENDER must generate PIN number number for the account...")
-                        else:
-                            print("...PIN number must contain 4 digits")
-                else:
-                    print("...SENDER must register in the ATM system")
-            else:
-                print("...Account number must contain 10 digits...")
-        else:
-            print("...RECEIVER must register in the ATM system...")
-    else:
-        print("...Account number must contain 10 digits...")
-    enquiry()
-def change_pin():
-    import pwinput as p
-    r1="yes"
-    r2="YES"
-    r3="NO"
-    r4="no"
-    print()
-    choice=input("Are you want to change Pin for your account ? (YES/NO):")
-    if choice ==r1 or choice ==r2:
-        try:
-            account_number=int(input("Enter your Account number:"))
-            x=str(account_number)
-            if len(x) == 10:
-                doc1=mycoll.find_one({'Account-number':{'$eq':account_number}})
-                if doc1:
-                    try:
-                        p1=int(p.pwinput("Enter old Pin number :" , '*'))
-                        s=str(p1)
-                        if len(s) == 4:
-                            q1='pin'
-                            document=mycoll.find_one({'Account-number':account_number})
-                            if q1 in document:
-                                query1=mycoll.find_one({'$and':[{'Account-number':{'$eq':account_number}},{'pin':{'$eq':p1}}]})
-                                if query1:
-                                    try:
-                                        pin_number1=int(p.pwinput("Enter a new Pin number :" , '*'))
-                                        if pin_number1==0000:
-                                            print("...Pin number must not be zero...")
-                                        pin_number2=int(p.pwinput("Re-enter a new Pin number :" , '*'))
-                                        if pin_number1 == pin_number2:
-                                            pin_number=pin_number1
-                                            mycoll.update_one({'Account-number':account_number},{'$set':{'pin':pin_number}})
-                                            print(" ...Pin was successfully changed for your account ...")
-                                        else:
-                                            print(" ...pin number should be matched. please Try again ...")
-                                    except:
-                                        print("...Pin number must contain only digits...")
-                                else:
-                                    print("...Please enter valid Account number and pin number details...")
-                            else:
-                                print("...User must be generate Pin number for the account...")
-                        else:
-                            print("...Pin number must contain 4 digits...")
-                    except:
-                        print("...Pin number must contain only digits...")
-                else:
-                    print("...User must be registered in the ATM system...")
-            else:
-                print("...Account number must contain 10 digits...")
-        except:
-            print("...Account number must contain only digits...")
-    elif choice == r3 or choice == r4:
-        print("...Thank you...")
-    else:
-        print("...Please choose valid option...")
-    enquiry()
-def check_balance():
-    import pwinput as p
-    print()
-    try:
-        account_number=int(input("Enter your account number:"))
-        x=str(account_number)
-        if len(x) == 10:
-            doc1=mycoll.find_one({'Account-number':{'$eq':account_number}})
-            if doc1:
-                p1=int(p.pwinput("Enter four digit Pin number:" , '*'))
-                if p1 ==0000:
-                    print("...Pin number must not be zero...")
-                s=str(p1)
-                if len(s) == 4:
-                    q1='pin'
-                    document=mycoll.find_one({'Account-number':account_number})
-                    if q1 in document:
-                        query1=mycoll.find_one({'$and':[{'Account-number':{'$eq':account_number}},{'pin':{'$eq':p1}}]})
-                        if query1:
-                            query2=mycoll.find({'Account-number':{'$eq':account_number}},{'money':1,'_id':0})
-                            print("....Balance amount in your Account is:")
-                            for x in query2:
-                                print(x)
-                        else:
-                            print(" ...Please enter valid Account number or Pin number ...")
-                    else:
-                        print(" ...User must be generate Pin number for the Account ...")
+                        print("...Pin must be generated for the account first...")
                 else:
                     print("...Pin number must contain 4 digits...")
             else:
-                print(" ...User must be register in the ATM system ...")
+                print("...Account not found. Please register first...")
         else:
             print("...Account number must contain 10 digits...")
-    except:
-        print("...Account number must contain only digits...")
+    except ValueError:
+        print("...Pin number must be a valid number...")
+    except Exception as e:
+        print(f"...Error: {str(e)}...")
     enquiry()
-def enquiry():
-    print()
-    q1=input("Are you want to continue the process ? (YES/NO) :")
-    if q1.lower()=="yes":
-        ATM()
-    elif q1.lower() == "no":
+
+def create_transac_his(accno, trans_type, amount, pin):
+    try:
+        time = datetime.now().strftime("%Y:%D:%H:%M:%S")
+        mycoll1.insert_one({'Account-number': accno, 'Transaction-Type': trans_type, 'Amount': amount, 'Time': time, 'pin': pin})
+    except Exception as e:
+        print(f"...Error creating transaction history: {str(e)}...")
+
+def view_transac_his():
+    try:
         print()
-        print("*** Thank For Using ATM System ***")
-        print("************* BYE ****************")
-    else:
-        print("...Please enter valid choice...")
+        account_number = int(input("Enter account number:"))
+        if valid_account_number(account_number):
+            doc = mycoll.find_one({'Account-number': account_number})
+            if doc and 'pin' in doc:
+                pin = int(p.pwinput("Enter your pin number: ", '*'))
+                if valid_pin(pin):
+                    if mycoll.find_one({'$and': [{'Account-number': account_number}, {'pin': pin}]}):
+                        transactions = mycoll1.find({'Account-number': account_number}, {'Amount': 1, 'Time': 1, 'Transaction-Type': 1, '_id': 0})
+                        for transaction in transactions:
+                            print(transaction)
+                    else:
+                        print("...Invalid pin or account details...")
+                else:
+                    print("...Pin number must contain 4 digits...")
+            else:
+                print("...Pin not generated for the account...")
+        else:
+            print("...Account number must contain 10 digits...")
+    except ValueError:
+        print("...Account number and pin must be digits...")
+    except Exception as e:
+        print(f"...Error: {str(e)}...")
+    enquiry()
+
+def withdraw():
+    try:
+        print()
+        account_number = int(input("Enter account number:"))
+        if valid_account_number(account_number):
+            doc1 = mycoll.find_one({'Account-number': account_number})
+            if doc1:
+                pin = int(p.pwinput("Please enter your pin number: ", '*'))
+                if valid_pin(pin):
+                    if 'pin' in doc1:
+                        account_data = mycoll.find_one({'$and': [{'Account-number': account_number}, {'pin': pin}]})
+                        if account_data:
+                            amount = int(input("Enter the amount to withdraw:"))
+                            if mycoll.find_one({'$and': [{'Account-number': account_number}, {'money': {'$gte': amount}}]}):
+                                mycoll.update_one({'Account-number': account_number}, {'$inc': {'money': -amount}})
+                                print(f"...Rs {amount} successfully withdrawn from your account...")
+                                create_transac_his(account_number, "withdraw", amount, pin)
+                            else:
+                                print("...Insufficient funds...")
+                        else:
+                            print("...Invalid pin...")
+                    else:
+                        print("...Please generate a pin first...")
+                else:
+                    print("...Pin must contain 4 digits...")
+            else:
+                print("...Account not found...")
+        else:
+            print("...Account number must contain 10 digits...")
+    except ValueError:
+        print("...Invalid input. Please enter numeric values...")
+    except Exception as e:
+        print(f"...Error: {str(e)}...")
+    enquiry()
+
+def money_transfer():
+    try:
+        print()
+        receiver_account_number = int(input("Enter RECEIVER'S account number:"))
+        if valid_account_number(receiver_account_number):
+            doc_receiver = mycoll.find_one({'Account-number': receiver_account_number})
+            if doc_receiver:
+                sender_account_number = int(input("Enter SENDER'S account number:"))
+                if valid_account_number(sender_account_number):
+                    doc_sender = mycoll.find_one({'Account-number': sender_account_number})
+                    if doc_sender:
+                        pin = int(p.pwinput("Enter your pin number: ", '*'))
+                        if valid_pin(pin):
+                            if mycoll.find_one({'$and': [{'Account-number': sender_account_number}, {'pin': pin}]}):
+                                amount = int(input("Enter the amount to transfer:"))
+                                if mycoll.find_one({'$and': [{'Account-number': sender_account_number}, {'money': {'$gte': amount}}]}):
+                                    mycoll.update_one({'Account-number': receiver_account_number}, {'$inc': {'money': amount}})
+                                    create_transac_his(receiver_account_number, "money transfer deposit", amount, pin)
+                                    mycoll.update_one({'Account-number': sender_account_number}, {'$inc': {'money': -amount}})
+                                    create_transac_his(sender_account_number, "money transfer withdrawal", amount, pin)
+                                    print(f"...Rs {amount} was successfully transferred...")
+                                else:
+                                    print("...Insufficient funds in sender's account...")
+                            else:
+                                print("...Invalid pin for sender account...")
+                        else:
+                            print("...Invalid pin...")
+                    else:
+                        print("...Sender account not found...")
+                else:
+                    print("...Sender account must be registered...")
+            else:
+                print("...Receiver account not found...")
+        else:
+            print("...Receiver account number must contain 10 digits...")
+    except ValueError:
+        print("...Invalid input...")
+    except Exception as e:
+        print(f"...Error: {str(e)}...")
+    enquiry()
+
+def change_pin():
+    try:
+        choice = input("Do you want to change your PIN? (YES/NO):").strip().lower()
+        if choice == 'yes':
+            account_number = int(input("Enter your account number:"))
+            if valid_account_number(account_number):
+                doc1 = mycoll.find_one({'Account-number': account_number})
+                if doc1:
+                    old_pin = int(p.pwinput("Enter your old pin: ", '*'))
+                    if valid_pin(old_pin):
+                        if mycoll.find_one({'$and': [{'Account-number': account_number}, {'pin': old_pin}]}):
+                            new_pin1 = int(p.pwinput("Enter your new pin: ", '*'))
+                            if new_pin1 != 0000:
+                                new_pin2 = int(p.pwinput("Re-enter your new pin: ", '*'))
+                                if new_pin1 == new_pin2:
+                                    mycoll.update_one({'Account-number': account_number}, {'$set': {'pin': new_pin1}})
+                                    print("...Your pin was successfully changed...")
+                                else:
+                                    print("...Pins do not match. Please try again...")
+                            else:
+                                print("...Pin cannot be zero...")
+                        else:
+                            print("...Incorrect old pin...")
+                    else:
+                        print("...Pin must be 4 digits...")
+                else:
+                    print("...Account not found...")
+            else:
+                print("...Account number must be 10 digits...")
+        elif choice == 'no':
+            print("...Thank you for using ATM System...")
+        else:
+            print("...Please enter valid option (YES/NO)...")
+    except ValueError:
+        print("...Invalid input...")
+    except Exception as e:
+        print(f"...Error: {str(e)}...")
+    enquiry()
+
+def check_balance():
+    try:
+        print()
+        account_number = int(input("Enter your account number:"))
+        if valid_account_number(account_number):
+            doc1 = mycoll.find_one({'Account-number': account_number})
+            if doc1:
+                pin = int(p.pwinput("Enter your pin number: ", '*'))
+                if valid_pin(pin):
+                    if mycoll.find_one({'$and': [{'Account-number': account_number}, {'pin': pin}]}):
+                        balance = mycoll.find_one({'Account-number': account_number})['money']
+                        print(f"Your balance is: Rs {balance}")
+                    else:
+                        print("...Invalid pin...")
+                else:
+                    print("...Pin number must contain 4 digits...")
+            else:
+                print("...Account not found...")
+        else:
+            print("...Account number must contain 10 digits...")
+    except ValueError:
+        print("...Account number and pin must contain only digits...")
+    except Exception as e:
+        print(f"...Error: {str(e)}...")
+    enquiry()
+
+def enquiry():
+    try:
+        print()
+        q1 = input("Do you want to continue the process? (YES/NO):").strip().lower()
+        if q1 == "yes":
+            ATM()
+        elif q1 == "no":
+            print("*** Thank you for using ATM System ***")
+            print("************* BYE ****************")
+        else:
+            print("...Please enter a valid choice...")
+    except Exception as e:
+        print(f"...Error: {str(e)}...")
+
 def main():
-    print()
-    print("***** welcome to ATM system *****")
+    print("\n***** Welcome to ATM System *****")
+
 def ATM():
     print()
     print(" (1) REGISTRATION                (2) PIN GENERATION ")
     print(" (3) DEPOSIT                     (4) WITHDRAW ")
     print(" (5) MONEY TRANSFER              (6) CHANGE PIN ")
     print(" (7) BALANCE ENQUIRY             (8) TRANSACTION HISTORY ")
-    print()
     try:
-        choice=int(input("Enter your choice to perform operation:"))
+        choice = int(input("Enter your choice to perform operation:"))
         if choice == 1:
             registration()
         elif choice == 2:
@@ -384,7 +323,12 @@ def ATM():
             check_balance()
         elif choice == 8:
             view_transac_his()
-    except:
-        print("...Please enter valid choice...")
+        else:
+            print("...Please enter a valid choice...")
+    except ValueError:
+        print("...Invalid input. Please enter a valid number choice...")
+    except Exception as e:
+        print(f"...Error: {str(e)}...")
+
 main()
 ATM()
