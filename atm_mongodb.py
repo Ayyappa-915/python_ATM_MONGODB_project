@@ -305,6 +305,7 @@ def ATM():
     print(" (3) DEPOSIT                     (4) WITHDRAW ")
     print(" (5) MONEY TRANSFER              (6) CHANGE PIN ")
     print(" (7) BALANCE ENQUIRY             (8) TRANSACTION HISTORY ")
+    print()
     try:
         choice = int(input("Enter your choice to perform operation:"))
         if choice == 1:
