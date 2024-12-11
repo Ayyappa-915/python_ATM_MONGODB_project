@@ -1,5 +1,5 @@
 import pymongo
-server=pymongo.MongoClient("mongodb://localhost:27017")
+server=pymongo.MongoClient("mongodb+srv://coderhoney915:coderhoney915@atm-cluster.1vgy1.mongodb.net/")
 mydb=server["atm_database"]
 mycoll=mydb["accounts"]
 mycoll1=mydb["Transactions"]
